@@ -1,0 +1,69 @@
+function [V_new gradV] =ValueFunction(x,~,~,Vcoef,s_,V,Par)
+sigma=Par.sigma;
+gamma=Par.gamma;
+alpha_1=Par.alpha_1;
+alpha_2=Par.alpha_2;
+P=Par.P;
+beta=Par.beta;
+alpha=[alpha_1 alpha_2];
+c1(1)=x(1); %consumption of agent 1 state 1
+c1(2)=x(2); %consumption of agent 1 state 2
+c2(1)=x(3);  %consumption of agent 2 state 1
+c2(2)=x(4); %consumption of agent 2 state 2
+l1(1)=x(5); %labor supply of agent 1 state 1
+l1(2)=x(6); %labor supply of agent 1 state 2
+
+
+        u2btildprime(1)=x(7);
+        u2btildprime(2)=x(8);
+
+
+    X(1,:) = [u2btildprime(1),c2(1)^(-sigma)/c1(1)^(-sigma)];%state next period
+    X(2,:) = [u2btildprime(2),c2(2)^(-sigma)/c1(2)^(-sigma)];%state next period
+    
+  %compute objective
+Vobj = P(s_,1)*(alpha(1)*u(c1(1),l1(1),sigma,gamma)+alpha(2)*u(c2(1),0,sigma,gamma)...
+    +beta*funeval(Vcoef{1},V(1),X(1,:)));
+
+Vobj = Vobj + P(s_,2)*(alpha(1)*u(c1(2),l1(2),sigma,gamma)+alpha(2)*u(c2(2),0,sigma,gamma)...
+    +beta*funeval(Vcoef{2},V(2),X(2,:)));
+
+V_new=Vobj;
+
+%% Gradient of the value function 
+
+% tomorrow
+X(1,:)=[u2btildprime(1) c2(1)^(-sigma)/c1(1)^(-sigma)];
+X(2,:)=[u2btildprime(2) c2(2)^(-sigma)/c1(2)^(-sigma)];
+dV_u2b(1)=funeval(Vcoef{1},V(1),X(1,:),[1 0 ]);
+dV_u2b(2)=funeval(Vcoef{2},V(2),X(2,:),[ 1 0]);
+dV_R(1)=funeval(Vcoef{1},V(1),X(1,:),[0 1 ]);
+dV_R(2)=funeval(Vcoef{2},V(2),X(2,:),[0 1 ]);
+
+
+% Derivative of the objective constraint
+dVobj(:,1) =[ alpha_1*P(s_,1)*(c1(1)^(-sigma)+beta*dV_R(1)*sigma*c1(1)^(sigma-1)*c2(1)^(-sigma));...        %c1(1)
+            0; ...                                                                                       %c1(2)     
+            alpha_2*P(s_,1)*(c2(1)^(-sigma)+beta*dV_R(1)*c1(1)^(sigma)*c2(1)^(-sigma-1)*(-sigma)); ...   %c2(1)
+            0;                                                                                           %c2(2)    
+            -alpha_1*P(s_,1)*l1(1)^(gamma); ...                                                          %l1(1)
+            0;  ...                                                                                         %l1(2)    
+            beta*P(s_,1)*dV_u2b(1); ....                                                                 %u2btildeprime(1)    
+            0;                      ...                                                                  %u2btildprime(2)
+            ];
+        
+
+dVobj(:,2) =[ 0; ...                                                                                       %c1(1)    
+            alpha_1*P(s_,2)*(c1(2)^(-sigma)+beta*dV_R(2)*sigma*c1(2)^(sigma-1)*c2(2)^(-sigma));...        %c1(2)    
+            0; ...                                                                                       %c2(1)    
+            alpha_2*P(s_,2)*(c2(2)^(-sigma)+beta*dV_R(2)*c1(2)^(sigma)*c2(2)^(-sigma-1)*(-sigma)); ...   %c2(2)
+            0; ...                                                                                       %l1(1)
+            -alpha_1*P(s_,2)*l1(2)^(gamma); ...                                                          %l1(2)
+            0;                                                                                           %u2btildprime(1)    
+            beta*P(s_,2)*dV_u2b(2); ....                                                                 %u2btildprime(2)
+            ];                                                                                          
+        
+     gradV=dVobj(:,1)+dVobj(:,2);
+
+
+end

@@ -1,0 +1,36 @@
+
+%BuildGrid
+
+% 1. u2*tilde_b_2
+u2btildMin=0;
+u2btildMax=100;
+
+u2btildGrid=linspace(u2bdiffMin,u2btildMax,u2btildGridSize);
+Para.u2bdiffGrid=u2bdiffGrid;
+
+
+% R=u_2/u_1 = (c1/c2)^(sigma)
+RMin=1;
+RMax=3;
+RGrid=
+
+% 3. u1
+%u1Min=der_u_c(1.2,sigma);
+%u1Max=der_u_c(.1 ,sigma);
+u1Min=1;
+u1Max=1.05;
+u1Grid=linspace(u1Min,u1Max,u1GridSize);
+Para.u1Grid=u1Grid;
+
+GridSize=bdiffGridSize*u1GridSize*u2GridSize;
+Para.GridSize=GridSize;
+
+%% Define the funtional space
+
+V(1) = fundefn('cheb',[OrderOfAppx_bdiff OrderOfApprx_u1 OrderOfApprx_u2] ,[bdiffMin u1Min u2Min],[bdiffMax u1Max u2Max]);
+V(2) = V(1);
+
+GridPoints=[u1Min u1Max ;u2Min u2Max;bdiffMin bdiffMax];
+rowLabels = {'$u_1$','$u_2$','$\tilde{b}^2$'};
+columnLabels = {'Lower Bound','Upper Bounds'};
+matrix2latex(GridPoints, [texpath 'GridPoints.tex'] , 'rowLabels', rowLabels, 'columnLabels', columnLabels, 'alignment', 'c', 'format', '%-6.2f', 'size', 'tiny');

@@ -1,0 +1,208 @@
+close all
+clear all
+SetParaStruc
+
+clear numsolved
+% CAPTION : fig:flagPoints - This plots the sucess of the optimizer to
+% solve the FOC at the points selected in the state space for the final set of coeffecients. The red points
+% denote failure.   
+
+for iter=1:3
+    
+    
+    load(['Data/c' num2str(iter) '.mat'])
+    numsolved(iter)=length(IndxSolved);
+
+end
+    xSolved=x_state(IndxSolved,:);
+xUnSolved=x_state(IndxUnSolved,:);
+
+figure()
+
+scatter(squeeze(xSolved(:,1)),squeeze(xSolved(:,2)),'b','filled')
+hold on
+scatter(squeeze(xUnSolved(:,1)),squeeze(xUnSolved(:,2)),'r','filled')
+hold on
+xlabel('$x$','Interpreter','Latex')
+ylabel('$R$','Interpreter','Latex')
+print(gcf,'-dpng',[plotpath 'flagPoints' num2str(iter) '.png'])
+
+% CAPTION : fig:NumFOCSolved - This plots shows the number of points that
+% the FOC had a solution across iterations
+
+figure()
+plot(numsolved)
+xlabel('Iter')
+ylabel('Number of points FOC were saisfied')
+
+
+figure()
+plot((cdiff(round(iter*.25):iter)'))
+xlabel('Iteration');
+ylabel('Max of Coefficient Difference');
+print(gcf,'-dpng',[plotpath 'CoeffConvergence.png'])
+
+load(['Data/c'  num2str(iter-1)  '.mat'])
+
+c_old=c;
+
+load(['Data/c'  num2str(iter)  '.mat'])
+c=c_old;
+
+
+u2btildLL=Para.u2btildLL;
+u2btildUL=Para.u2btildUL;
+ucbtild_bounds = [min(x_state(:,1)),max(x_state(:,1))];
+Rbounds=[min(x_state(:,2)),max(x_state(:,2))];
+
+%Caption : fig:FunctionalConvergence - This figure plots the value function
+% with respect to $\tilde{b}_2$ across iterations. The four panels refer to
+% vaules of R. The red line is the first iteration
+
+NumIter=round((iter-1)/10);
+MaxIter=iter;
+ListIterations=(1:NumIter:iter);
+figure()
+% Fix s_
+s_=1;
+RList=linspace(Rbounds(1),Rbounds(2),4);
+for l=1:length(ListIterations)
+     load(['Data/c' num2str(ListIterations(l)) '.mat'])
+
+for Rctr=1:4
+    subplot(2,2,Rctr)
+if l==1
+fplot(@(u2btild) funeval(c(s_,:)',V(s_),[u2btild RList(Rctr)]),[u2btildLL u2btildUL],'-r');
+else
+    fplot(@(u2btild) funeval(c(s_,:)',V(s_),[u2btild RList(Rctr)]),[u2btildLL u2btildUL],'-k');
+end
+xlabel('$x$','Interpreter','Latex')
+title(['$R=$' num2str(RList(Rctr))])
+hold on
+end
+end
+
+print(gcf,'-dpng',[plotpath 'FunctionalConvergence.png'])
+
+% 
+% % ChebError
+% 
+% 
+% 
+% 
+%  numtest=75;
+%  for n=1:numtest
+% %     
+% %     
+%      u1btild=ucbtild_bounds(1)+(ucbtild_bounds(2)-ucbtild_bounds(1))*rand;
+%      
+% xTarget(n)=u1btild;
+%  [PolicyRulesInit]=GetInitialApproxPolicy(u1btild,x_state,PolicyRulesStore);
+%  [PolicyRules, V_new,exitflag,exitflagB]=SolveGradNAG(u1btild,c',V,PolicyRulesInit(1),Para) ;
+%  VDirect=funeval(c,V,u1btild);
+%  Check(n)=(VDirect-V_new)/V_new;
+% 
+% if ~(exitflag==1)
+%  colFOC(n,:)=[1 0 0];
+%  else
+%      colFOC(n,:)=[0 0 1];
+%  end
+%  
+% 
+%  end
+%  figure()
+%  plot(Check)
+%  xlabel('Number of Test Points')
+%  ylabel('Percentage Error')
+%  print(gcf,'-dpng',[plotpath 'ChebError.png'])
+%  
+% 
+% % Caption : fig:ValueFunction - This plot depicts the value function 
+% 
+% 
+% 
+% fplot(@(u1btild) funeval(c,V,u1btild),ucbtild_bounds,'-k');
+% xlabel('$x$','Interpreter','Latex')
+% ylabel('$V(x)$','Interpreter','Latex')
+%  print(gcf,'-dpng',[plotpath 'ValueFunction.png'])
+%  
+% 
+ % Policy Rules
+% Caption : fig:PolicyRules - This plot depicts the $\tilde{b}'_2$ as a function of $\tilde{b}_2$ 
+ figu2BtildePrime =figure('Name','x');
+ figRprime=figure('Name','R');
+ 
+ u2bdiffFineGrid=linspace(ucbtild_bounds(1),ucbtild_bounds(2),20);
+ s_=1;
+for Rctr=1:4 
+ for u2btildctr=1:length(u2bdiffFineGrid)
+    R=RList(Rctr);
+     u2btild=u2bdiffFineGrid(u2btildctr);
+   [PolicyRulesInit]=GetInitialApproxPolicy([u2btild R s_] ,x_state,PolicyRulesStore);
+    [PolicyRules, V_new,exitflag]=CheckGradNAG(u2btild,R,s_,c,V,PolicyRulesInit,Para);
+    if exitflag==1
+        IndxPrint(u2btildctr)=1;
+    else
+        IndxPrint(u2btildctr)=0;
+    end
+    
+% 
+  u2BtildePrime(u2btildctr,:)=PolicyRules(end-1:end);
+  Rprime(u2btildctr,:)=PolicyRules(end-3:end-2);
+ end
+
+%  cons(u1btildctr) = PolicyRules(1);
+% end
+ figure(figu2BtildePrime)
+ subplot(2,2,Rctr)
+ plot(u2bdiffFineGrid(logical(IndxPrint)), u2BtildePrime(logical(IndxPrint),:),'k');
+ hold on
+% 
+ plot(u2bdiffFineGrid, u2bdiffFineGrid,':k');
+ hold on
+ plot(u2bdiffFineGrid,repmat([u2btildLL u2btildUL],length(u2bdiffFineGrid),1) ,':r')
+% 
+ xlabel('$x$','Interpreter','Latex')
+ ylabel('$x*$','Interpreter','Latex')
+ title(['$R=$' num2str(RList(Rctr))])
+
+ 
+% 
+ figure(figRprime)
+ subplot(2,2,Rctr)
+ plot(u2bdiffFineGrid(logical(IndxPrint)), Rprime(logical(IndxPrint),:),'k');
+ xlabel('$x$','Interpreter','Latex')
+ ylabel('$R^{*}$','Interpreter','Latex')
+  title(['$R=$' num2str(RList(Rctr))])
+end
+ print(figu2BtildePrime,'-dpng',[plotpath 'BtildePrime.png'])
+%  
+  print(figRprime,'-dpng',[plotpath 'Cons.png'])
+% 
+% 
+% 
+% % simulation
+% NumSim=1000;
+% 
+% u1btildHist(1)=ucbtild_bounds(1)+(ucbtild_bounds(2)-ucbtild_bounds(1))*rand;
+% xInit=1;
+% for i=1:NumSim
+%     
+%     
+%     
+%     u1btild=u1btildHist(i);
+%     [PolicyRulesInit]=GetInitialApproxPolicy(u1btild ,x_state,PolicyRulesStore);
+%      [PolicyRules, V_new,exitflag,exitflagB]=SolveGradNAG(u1btild,c',V,xInit,Para) ;
+%     ConsHist(i)=PolicyRules(1);
+%   u1btildHist(i+1)=PolicyRules(end) ;
+%     btildHist(i)= u1btild/ConsHist(i)^(-sigma);
+% 
+% end
+% figure()
+% plot(u1btildHist)
+%  print(gcf,'-dpng',[plotpath 'Simulation.png'])
+% figure()
+% plot(btildHist)
+%  print(gcf,'-dpng',[plotpath 'SimulationBtild.png'])
+% 
+% 
